@@ -168,7 +168,36 @@
 ### 1. 作用
 
 - **可见性**：一个线程改了这个变量，别的线程能马上看到（通过内存屏障刷新/失效缓存）。
-- **禁止指令重排**：保证「写 volatile」之前的操作不会被重排到写之后，「读 volatile」之后的操作不会被重排到读之前（如单例双重检查里的 instance 用 volatile）。
+- **禁止指令重排**：保证「写 volatile」之前的操作不会被重排到写之后，「读 volatile」之后的操作不会被重排到读之前（如单例双重检查（DCL）里的 instance 用 volatile）。
+
+  ```
+  public class Singleton {
+      
+      // 1. 必须加 volatile，这是防翻车的最后一道防线！
+      private static volatile Singleton instance;
+  
+      // 2. 构造方法私有化，防止别人在外面 new
+      private Singleton() {
+      }
+  
+      // 3. 全局唯一获取实例的方法
+      public static Singleton getInstance() {
+          // 第一重检查：如果不为空，直接返回，连锁都不用抢，性能拉满！
+          if (instance == null) {
+              // 抢锁：只在第一次初始化时才需要排队
+              synchronized (Singleton.class) {
+                  // 第二重检查：拿到锁之后再查一次，防止别人刚才已经帮你建好了！
+                  if (instance == null) {
+                      instance = new Singleton();
+                  }
+              }
+          }
+          return instance;
+      }
+  }
+  ```
+
+  
 
 ### 2. 不保证原子性
 
